@@ -1,0 +1,13 @@
+{
+  "name": "performance-survey-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "课程分享满意度调研与绩效核算网站",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
