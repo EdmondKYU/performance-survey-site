@@ -61,11 +61,42 @@ function ensureDataFile() {
 
 function readDb() {
   ensureDataFile();
-  return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+  const db = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+  if (ensureConfiguredAdmin(db)) {
+    writeDb(db);
+  }
+  return db;
 }
 
 function writeDb(db) {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), "utf8");
+}
+
+function ensureConfiguredAdmin(db) {
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@example.com").toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD || "admin123456";
+  let changed = false;
+
+  let admin = db.users.find((user) => user.role === "admin" && user.email === adminEmail);
+  if (!admin) {
+    admin = {
+      id: makeId("admin"),
+      role: "admin",
+      name: "系统管理员",
+      email: adminEmail,
+      password: hashPassword(adminPassword),
+      createdAt: nowIso()
+    };
+    db.users.push(admin);
+    changed = true;
+  }
+
+  if (!verifyPassword(adminPassword, admin.password)) {
+    admin.password = hashPassword(adminPassword);
+    changed = true;
+  }
+
+  return changed;
 }
 
 function hashPassword(password) {
