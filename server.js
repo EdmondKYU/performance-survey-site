@@ -12,7 +12,81 @@ const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 const sessions = new Map();
 
-const questionKeys = ["usefulness", "insight", "clarity", "caseQuality", "interaction"];
+const surveyTemplates = {
+  course_share: {
+    id: "course_share",
+    name: "课程分享满意度调研",
+    shortName: "课程分享",
+    ownerRoleName: "讲师",
+    itemName: "课程",
+    itemNamePlaceholder: "例如：5 月项目复盘分享",
+    itemNoteName: "课程备注",
+    itemNotePlaceholder: "可填写分享主题、项目背景或适用对象",
+    defaultCategory: "知识分享/项目复盘分享",
+    respondentNameLabel: "学员姓名",
+    respondentDepartmentLabel: "部门/小组",
+    respondentNameFallback: "匿名学员",
+    dataSource: "现场学员评",
+    achievementLabel: "满意度",
+    achievementSuffix: "%",
+    maxTotal: 100,
+    weight: 0.3,
+    weightLabel: "30%",
+    trimNote: "样本少于 3 份，暂不剔除最高分和最低分",
+    trimmedNote: "已剔除 1 个最高总分和 1 个最低总分",
+    belowBand: "满意度不足 77%，此项考核为 0",
+    questions: [
+      { key: "usefulness", label: "内容实用度", prompt: "听完能用上吗？" },
+      { key: "insight", label: "见解深度", prompt: "有没有独到洞察？" },
+      { key: "clarity", label: "结构清晰度", prompt: "听得懂、跟得上吗？" },
+      { key: "caseQuality", label: "案例质量", prompt: "有真实例支撑吗？" },
+      { key: "interaction", label: "互动参与感", prompt: "有参与感还是全程被动？" }
+    ],
+    bands: [
+      { min: 95, max: 100, outMin: 100, outMax: 120, label: "满意度 95% 以上，对应 120-100 分" },
+      { min: 89, max: 94, outMin: 85, outMax: 100, label: "满意度 94%-89%，对应 100-85 分" },
+      { min: 81, max: 88, outMin: 70, outMax: 84, label: "满意度 88%-81%，对应 84-70 分" },
+      { min: 77, max: 80, outMin: 60, outMax: 69, label: "满意度 80%-77%，对应 69-60 分" }
+    ]
+  },
+  cross_department: {
+    id: "cross_department",
+    name: "跨部门协同满意度调研",
+    shortName: "跨部门协同",
+    ownerRoleName: "负责人",
+    itemName: "协同事项",
+    itemNamePlaceholder: "例如：新品上市跨部门协同",
+    itemNoteName: "协同说明",
+    itemNotePlaceholder: "可填写协同背景、参与部门、交付目标或周期",
+    defaultCategory: "跨部门协同",
+    respondentNameLabel: "评价人姓名",
+    respondentDepartmentLabel: "评价人部门",
+    respondentNameFallback: "匿名评价人",
+    dataSource: "协作满意度问卷评分",
+    achievementLabel: "协作得分",
+    achievementSuffix: "",
+    maxTotal: 120,
+    weight: 0.2,
+    weightLabel: "20%",
+    trimNote: "样本少于 3 份，暂不剔除最高分和最低分",
+    trimmedNote: "已剔除 1 个最高总分和 1 个最低总分",
+    belowBand: "低于 60 分，此项考核为 0",
+    questions: [
+      { key: "requirementClarity", label: "需求清晰度", prompt: "目标、需求与验收口径是否清晰？" },
+      { key: "deliveryStandard", label: "交付规范性", prompt: "交付物是否规范、完整、可复用？" },
+      { key: "responseSpeed", label: "响应时效性", prompt: "响应是否及时，关键节点是否不拖延？" },
+      { key: "collaborationFit", label: "协作配合度", prompt: "跨部门配合是否主动、顺畅？" },
+      { key: "communicationEffect", label: "沟通有效性", prompt: "信息传递是否准确、减少反复？" },
+      { key: "processControl", label: "过程可控性", prompt: "过程是否有预警、有节奏、有闭环？" }
+    ],
+    bands: [
+      { min: 100, max: 120, outMin: 100, outMax: 120, label: "非常满意，并给予高度评价，对应 120-100 分" },
+      { min: 85, max: 99.9, outMin: 85, outMax: 100, label: "满意，基本达到标准，对应 100-85 分" },
+      { min: 70, max: 84.9, outMin: 70, outMax: 84, label: "评价尚可，还有进步空间，对应 84-70 分" },
+      { min: 60, max: 69.9, outMin: 60, outMax: 69, label: "评价一般，有较大进步空间，对应 69-60 分" }
+    ]
+  }
+};
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -62,7 +136,10 @@ function ensureDataFile() {
 function readDb() {
   ensureDataFile();
   const db = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
-  if (ensureConfiguredAdmin(db)) {
+  const shapeChanged = ensureDbShape(db);
+  const adminChanged = ensureConfiguredAdmin(db);
+  const changed = shapeChanged || adminChanged;
+  if (changed) {
     writeDb(db);
   }
   return db;
@@ -97,6 +174,69 @@ function ensureConfiguredAdmin(db) {
   }
 
   return changed;
+}
+
+function ensureDbShape(db) {
+  let changed = false;
+  if (!Array.isArray(db.users)) {
+    db.users = [];
+    changed = true;
+  }
+  if (!Array.isArray(db.courses)) {
+    db.courses = [];
+    changed = true;
+  }
+  if (!Array.isArray(db.responses)) {
+    db.responses = [];
+    changed = true;
+  }
+
+  db.courses.forEach((course) => {
+    if (!course.templateId) {
+      course.templateId = "course_share";
+      changed = true;
+    }
+  });
+
+  db.responses.forEach((response) => {
+    if (!response.templateId) {
+      const course = db.courses.find((item) => item.id === response.courseId);
+      response.templateId = course?.templateId || "course_share";
+      changed = true;
+    }
+  });
+
+  return changed;
+}
+
+function getTemplate(templateId) {
+  return surveyTemplates[templateId] || surveyTemplates.course_share;
+}
+
+function publicTemplate(template) {
+  return {
+    id: template.id,
+    name: template.name,
+    shortName: template.shortName,
+    ownerRoleName: template.ownerRoleName,
+    itemName: template.itemName,
+    itemNamePlaceholder: template.itemNamePlaceholder,
+    itemNoteName: template.itemNoteName,
+    itemNotePlaceholder: template.itemNotePlaceholder,
+    defaultCategory: template.defaultCategory,
+    respondentNameLabel: template.respondentNameLabel,
+    respondentDepartmentLabel: template.respondentDepartmentLabel,
+    respondentNameFallback: template.respondentNameFallback,
+    dataSource: template.dataSource,
+    achievementLabel: template.achievementLabel,
+    achievementSuffix: template.achievementSuffix,
+    maxTotal: template.maxTotal,
+    weight: template.weight,
+    weightLabel: template.weightLabel,
+    questions: template.questions,
+    bands: template.bands,
+    belowBand: template.belowBand
+  };
 }
 
 function hashPassword(password) {
@@ -213,43 +353,39 @@ function interpolate(value, inMin, inMax, outMin, outMax) {
   return outMin + ((clamped - inMin) / (inMax - inMin)) * (outMax - outMin);
 }
 
-function mapKpiScore(satisfaction) {
-  if (satisfaction === null || satisfaction === undefined) {
+function mapKpiScore(achievement, template) {
+  if (achievement === null || achievement === undefined) {
     return { score: null, weightedScore: null, band: "暂无数据" };
   }
 
   let score = 0;
-  let band = "满意度不足 77%，此项考核为 0";
+  let band = template.belowBand;
 
-  if (satisfaction >= 95) {
-    score = interpolate(satisfaction, 95, 100, 100, 120);
-    band = "满意度 95% 以上，对应 120-100 分";
-  } else if (satisfaction >= 89) {
-    score = interpolate(satisfaction, 89, 94, 85, 100);
-    band = "满意度 94%-89%，对应 100-85 分";
-  } else if (satisfaction >= 81) {
-    score = interpolate(satisfaction, 81, 88, 70, 84);
-    band = "满意度 88%-81%，对应 84-70 分";
-  } else if (satisfaction >= 77) {
-    score = interpolate(satisfaction, 77, 80, 60, 69);
-    band = "满意度 80%-77%，对应 69-60 分";
+  for (const item of template.bands) {
+    if (achievement >= item.min && achievement <= item.max) {
+      score = interpolate(achievement, item.min, item.max, item.outMin, item.outMax);
+      band = item.label;
+      break;
+    }
   }
 
   const rounded = round(score, 1);
   return {
     score: rounded,
-    weightedScore: round(rounded * 0.3, 1),
+    weightedScore: round(rounded * template.weight, 1),
     band
   };
 }
 
-function computeStats(responses) {
+function computeStats(responses, templateInput = "course_share") {
+  const template = typeof templateInput === "string" ? getTemplate(templateInput) : templateInput;
+  const questionKeys = template.questions.map((question) => question.key);
   const count = responses.length;
   const totals = responses.map((response) => response.total);
   const rawAverage = count ? totals.reduce((sum, total) => sum + total, 0) / count : null;
 
   let trimmed = responses.slice();
-  let trimNote = "样本少于 3 份，暂不剔除最高分和最低分";
+  let trimNote = template.trimNote;
   let removedHigh = null;
   let removedLow = null;
 
@@ -258,15 +394,15 @@ function computeStats(responses) {
     removedLow = sorted[0];
     removedHigh = sorted[sorted.length - 1];
     trimmed = sorted.slice(1, -1);
-    trimNote = "已剔除 1 个最高总分和 1 个最低总分";
+    trimNote = template.trimmedNote;
   }
 
   const trimmedCount = trimmed.length;
   const trimmedAverage = trimmedCount
     ? trimmed.reduce((sum, response) => sum + response.total, 0) / trimmedCount
     : rawAverage;
-  const satisfaction = trimmedAverage === null ? null : trimmedAverage;
-  const kpi = mapKpiScore(satisfaction);
+  const achievement = trimmedAverage === null ? null : trimmedAverage;
+  const kpi = mapKpiScore(achievement, template);
 
   const dimensionAverages = questionKeys.reduce((result, key) => {
     result[key] = trimmedCount
@@ -280,7 +416,12 @@ function computeStats(responses) {
     rawAverage: round(rawAverage, 1),
     trimmedCount,
     trimmedAverage: round(trimmedAverage, 1),
-    satisfaction: round(satisfaction, 1),
+    satisfaction: round(achievement, 1),
+    achievement: round(achievement, 1),
+    achievementLabel: template.achievementLabel,
+    achievementSuffix: template.achievementSuffix,
+    maxTotal: template.maxTotal,
+    weightLabel: template.weightLabel,
     kpiScore: kpi.score,
     weightedScore: kpi.weightedScore,
     band: kpi.band,
@@ -303,19 +444,35 @@ function responseSummary(response) {
 function courseSummary(course, db) {
   const teacher = db.users.find((user) => user.id === course.teacherId);
   const responses = db.responses.filter((response) => response.courseId === course.id);
+  const template = getTemplate(course.templateId);
   return {
     ...course,
+    template: publicTemplate(template),
     teacherName: teacher ? teacher.name : "未知讲师",
     teacherEmail: teacher ? teacher.email : "",
-    stats: computeStats(responses)
+    stats: computeStats(responses, template)
   };
 }
 
-function validateScores(scores) {
+function templateStats(db, responses) {
+  return Object.values(surveyTemplates).map((template) => {
+    const scoped = responses.filter((response) => {
+      if (response.templateId) return response.templateId === template.id;
+      const course = db.courses.find((item) => item.id === response.courseId);
+      return (course?.templateId || "course_share") === template.id;
+    });
+    return {
+      template: publicTemplate(template),
+      stats: computeStats(scoped, template)
+    };
+  });
+}
+
+function validateScores(scores, template) {
   if (!scores || typeof scores !== "object") return null;
 
   const clean = {};
-  for (const key of questionKeys) {
+  for (const key of template.questions.map((question) => question.key)) {
     const value = asNumber(scores[key]);
     if (value === null || value < 0 || value > 20) return null;
     clean[key] = Math.round(value * 10) / 10;
@@ -331,36 +488,36 @@ function csvEscape(value) {
 function buildCsv(db) {
   const headers = [
     "提交时间",
-    "讲师",
-    "讲师邮箱",
-    "课程",
-    "学员",
+    "问卷模板",
+    "负责人",
+    "负责人邮箱",
+    "问卷事项",
+    "评价人",
     "部门",
-    "内容实用度",
-    "见解深度",
-    "结构清晰度",
-    "案例质量",
-    "互动参与感",
+    "维度得分明细",
     "总分",
+    "满分",
     "建议"
   ];
 
   const rows = db.responses.map((response) => {
     const course = db.courses.find((item) => item.id === response.courseId);
     const teacher = db.users.find((item) => item.id === response.teacherId);
+    const template = getTemplate(response.templateId || course?.templateId);
+    const scoreText = template.questions
+      .map((question) => `${question.label}:${response.scores?.[question.key] ?? ""}/20`)
+      .join("；");
     return [
       response.createdAt,
+      template.name,
       teacher ? teacher.name : "",
       teacher ? teacher.email : "",
       course ? course.title : "",
-      response.participantName || "匿名",
+      response.participantName || template.respondentNameFallback,
       response.department || "",
-      response.scores.usefulness,
-      response.scores.insight,
-      response.scores.clarity,
-      response.scores.caseQuality,
-      response.scores.interaction,
+      scoreText,
       response.total,
+      template.maxTotal,
       response.comment || ""
     ];
   });
@@ -376,13 +533,17 @@ async function handleApi(req, res, pathname) {
     return sendJson(res, 200, { user: publicUser(user) });
   }
 
+  if (req.method === "GET" && pathname === "/api/templates") {
+    return sendJson(res, 200, { templates: Object.values(surveyTemplates).map(publicTemplate) });
+  }
+
   if (req.method === "POST" && pathname === "/api/auth/register") {
     const body = await readBody(req);
     const name = String(body.name || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
 
-    if (name.length < 2) return sendError(res, 400, "请填写讲师姓名");
+    if (name.length < 2) return sendError(res, 400, "请填写负责人姓名");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return sendError(res, 400, "邮箱格式不正确");
     if (password.length < 6) return sendError(res, 400, "密码至少 6 位");
     if (db.users.some((item) => item.email === email)) return sendError(res, 409, "该邮箱已注册");
@@ -429,17 +590,20 @@ async function handleApi(req, res, pathname) {
   const publicCourseMatch = pathname.match(/^\/api\/public\/courses\/([^/]+)$/);
   if (req.method === "GET" && publicCourseMatch) {
     const course = db.courses.find((item) => item.id === publicCourseMatch[1]);
-    if (!course) return sendError(res, 404, "课程不存在");
+    if (!course) return sendError(res, 404, "问卷不存在");
     const teacher = db.users.find((item) => item.id === course.teacherId);
+    const template = getTemplate(course.templateId);
     return sendJson(res, 200, {
       course: {
         id: course.id,
         title: course.title,
+        templateId: template.id,
         category: course.category,
         scheduledAt: course.scheduledAt,
         description: course.description,
         active: course.active
       },
+      template: publicTemplate(template),
       teacher: teacher ? { id: teacher.id, name: teacher.name } : null
     });
   }
@@ -447,18 +611,20 @@ async function handleApi(req, res, pathname) {
   const responseMatch = pathname.match(/^\/api\/public\/courses\/([^/]+)\/responses$/);
   if (req.method === "POST" && responseMatch) {
     const course = db.courses.find((item) => item.id === responseMatch[1]);
-    if (!course) return sendError(res, 404, "课程不存在");
-    if (!course.active) return sendError(res, 403, "该课程问卷已关闭");
+    if (!course) return sendError(res, 404, "问卷不存在");
+    if (!course.active) return sendError(res, 403, "该问卷已关闭");
 
     const body = await readBody(req);
-    const scores = validateScores(body.scores);
+    const template = getTemplate(course.templateId);
+    const scores = validateScores(body.scores, template);
     if (!scores) return sendError(res, 400, "评分必须在 0-20 分之间");
 
-    const total = questionKeys.reduce((sum, key) => sum + scores[key], 0);
+    const total = template.questions.reduce((sum, question) => sum + scores[question.key], 0);
     const response = {
       id: makeId("resp"),
       courseId: course.id,
       teacherId: course.teacherId,
+      templateId: template.id,
       participantName: String(body.participantName || "").trim().slice(0, 40),
       department: String(body.department || "").trim().slice(0, 60),
       scores,
@@ -475,16 +641,18 @@ async function handleApi(req, res, pathname) {
   if (!user) return sendError(res, 401, "请先登录");
 
   if (req.method === "POST" && pathname === "/api/courses") {
-    if (user.role !== "teacher") return sendError(res, 403, "只有讲师可以创建课程");
+    if (user.role !== "teacher") return sendError(res, 403, "只有负责人可以创建问卷");
     const body = await readBody(req);
     const title = String(body.title || "").trim();
-    if (title.length < 2) return sendError(res, 400, "请填写课程名称");
+    const template = getTemplate(body.templateId);
+    if (title.length < 2) return sendError(res, 400, "请填写问卷事项");
 
     const course = {
       id: makeId("course"),
       teacherId: user.id,
+      templateId: template.id,
       title: title.slice(0, 80),
-      category: String(body.category || "知识分享/项目复盘分享").trim().slice(0, 60),
+      category: String(body.category || template.defaultCategory).trim().slice(0, 60),
       scheduledAt: String(body.scheduledAt || "").trim().slice(0, 40),
       description: String(body.description || "").trim().slice(0, 300),
       active: true,
@@ -499,7 +667,7 @@ async function handleApi(req, res, pathname) {
   const updateCourseMatch = pathname.match(/^\/api\/courses\/([^/]+)$/);
   if (["PATCH", "DELETE"].includes(req.method) && updateCourseMatch) {
     const course = db.courses.find((item) => item.id === updateCourseMatch[1]);
-    if (!course) return sendError(res, 404, "课程不存在");
+    if (!course) return sendError(res, 404, "问卷不存在");
     if (user.role !== "admin" && course.teacherId !== user.id) return sendError(res, 403, "无权操作该课程");
 
     if (req.method === "DELETE") {
@@ -512,7 +680,7 @@ async function handleApi(req, res, pathname) {
     if (typeof body.active === "boolean") course.active = body.active;
     if (body.title !== undefined) {
       const title = String(body.title || "").trim();
-      if (title.length < 2) return sendError(res, 400, "课程名称至少 2 个字");
+      if (title.length < 2) return sendError(res, 400, "问卷事项至少 2 个字");
       course.title = title.slice(0, 80);
     }
     writeDb(db);
@@ -520,21 +688,30 @@ async function handleApi(req, res, pathname) {
   }
 
   if (req.method === "GET" && pathname === "/api/teacher/dashboard") {
-    if (user.role !== "teacher") return sendError(res, 403, "当前账号不是讲师");
+    if (user.role !== "teacher") return sendError(res, 403, "当前账号不是负责人");
     const courses = db.courses.filter((course) => course.teacherId === user.id).map((course) => courseSummary(course, db));
     const responses = db.responses
       .filter((response) => response.teacherId === user.id)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, 100);
-    const stats = computeStats(db.responses.filter((response) => response.teacherId === user.id));
-    return sendJson(res, 200, { user: publicUser(user), courses, responses, stats });
+    const allResponses = db.responses.filter((response) => response.teacherId === user.id);
+    const stats = computeStats(allResponses.filter((response) => (response.templateId || "course_share") === "course_share"));
+    return sendJson(res, 200, {
+      user: publicUser(user),
+      templates: Object.values(surveyTemplates).map(publicTemplate),
+      courses,
+      responses,
+      stats,
+      templateStats: templateStats(db, allResponses)
+    });
   }
 
   if (req.method === "GET" && pathname === "/api/admin/dashboard") {
     if (user.role !== "admin") return sendError(res, 403, "当前账号不是管理员");
     const teachers = db.users.filter((item) => item.role === "teacher").map((teacher) => ({
       ...publicUser(teacher),
-      stats: computeStats(db.responses.filter((response) => response.teacherId === teacher.id))
+      stats: computeStats(db.responses.filter((response) => response.teacherId === teacher.id && (response.templateId || "course_share") === "course_share")),
+      templateStats: templateStats(db, db.responses.filter((response) => response.teacherId === teacher.id))
     }));
     const courses = db.courses.map((course) => courseSummary(course, db));
     const responses = db.responses
@@ -545,13 +722,23 @@ async function handleApi(req, res, pathname) {
         const teacher = db.users.find((item) => item.id === response.teacherId);
         return {
           ...response,
+          templateId: response.templateId || course?.templateId || "course_share",
+          templateName: getTemplate(response.templateId || course?.templateId).shortName,
           courseTitle: course ? course.title : "",
           teacherName: teacher ? teacher.name : "",
           teacherEmail: teacher ? teacher.email : ""
         };
       });
-    const stats = computeStats(db.responses);
-    return sendJson(res, 200, { user: publicUser(user), teachers, courses, responses, stats });
+    const stats = computeStats(db.responses.filter((response) => (response.templateId || "course_share") === "course_share"));
+    return sendJson(res, 200, {
+      user: publicUser(user),
+      templates: Object.values(surveyTemplates).map(publicTemplate),
+      teachers,
+      courses,
+      responses,
+      stats,
+      templateStats: templateStats(db, db.responses)
+    });
   }
 
   if (req.method === "GET" && pathname === "/api/admin/export") {

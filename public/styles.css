@@ -300,6 +300,82 @@ h3 {
   line-height: 1.55;
 }
 
+.template-list {
+  display: grid;
+  gap: 12px;
+}
+
+.template-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.template-card strong,
+.template-card span {
+  display: block;
+}
+
+.template-card strong {
+  margin-bottom: 4px;
+}
+
+.template-card span {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.template-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.template-meta span {
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--brand);
+  background: #e5f2eb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.template-stat-list {
+  display: grid;
+  gap: 10px;
+}
+
+.template-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(92px, 0.6fr) minmax(92px, 0.6fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.template-stat strong,
+.template-stat b,
+.template-stat span {
+  display: block;
+}
+
+.template-stat b {
+  font-size: 20px;
+}
+
+.template-stat span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .kpi-table {
   width: 100%;
   border-collapse: collapse;
@@ -669,6 +745,10 @@ table.data tr:last-child td {
   }
 
   .score-row {
+    grid-template-columns: 1fr;
+  }
+
+  .template-stat {
     grid-template-columns: 1fr;
   }
 }
