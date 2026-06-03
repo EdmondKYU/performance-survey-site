@@ -19,6 +19,7 @@ const fallbackTemplates = [
     achievementLabel: "满意度",
     achievementSuffix: "%",
     maxTotal: 100,
+    weightLabel: "30%",
     questions: [
       { key: "usefulness", label: "内容实用度", prompt: "听完能用上吗？" },
       { key: "insight", label: "见解深度", prompt: "有没有独到洞察？" },
@@ -44,6 +45,7 @@ const fallbackTemplates = [
     achievementLabel: "协作得分",
     achievementSuffix: "",
     maxTotal: 120,
+    weightLabel: "20%",
     questions: [
       { key: "requirementClarity", label: "需求清晰度", prompt: "目标、需求与验收口径是否清晰？" },
       { key: "deliveryStandard", label: "交付规范性", prompt: "交付物是否规范、完整、可复用？" },
@@ -70,6 +72,7 @@ const fallbackTemplates = [
     achievementLabel: "配合度得分",
     achievementSuffix: "",
     maxTotal: 120,
+    weightLabel: "20%",
     questions: [
       { key: "executionDepth", label: "执行落实度", prompt: "交办的事放心吗？" },
       { key: "ownership", label: "主动担责", prompt: "推一步走一步还是自己跑？" },
@@ -217,13 +220,15 @@ function renderHome() {
         <p class="sub">把不同 KPI 表格沉淀成可复用问卷模板。负责人创建问卷后生成二维码，评价人扫码打分，系统按模板规则剔除最高分和最低分并计算绩效分。</p>
 
         <div class="entry-strip">
-          <a class="entry" href="/teacher" data-link>
-            <strong>负责人</strong>
+          <a class="entry entry-clickable" href="/teacher" data-link>
+            <strong>负责人<span class="entry-arrow">→</span></strong>
             <span>注册账号、选择模板、创建问卷、生成二维码、查看个人数据。</span>
+            <em>进入负责人后台</em>
           </a>
-          <a class="entry" href="/admin" data-link>
-            <strong>管理员</strong>
+          <a class="entry entry-clickable" href="/admin" data-link>
+            <strong>管理员<span class="entry-arrow">→</span></strong>
             <span>查看全部负责人、全部问卷、明细评价和绩效核算结果。</span>
+            <em>进入管理员后台</em>
           </a>
           <div class="entry">
             <strong>评价人</strong>
@@ -244,6 +249,7 @@ function renderHome() {
               <div class="template-meta">
                 <span>${template.questions.length} 个维度</span>
                 <span>满分 ${template.maxTotal}</span>
+                <span>KPI 权重 ${template.weightLabel}</span>
               </div>
             </article>
           `).join("")}
@@ -275,8 +281,8 @@ function renderAuth(targetRole = "teacher") {
             <span>有效样本达到 3 份后，核算时剔除最高分和最低分。</span>
           </div>
           <div class="entry">
-            <strong>绩效核算</strong>
-            <span>按所选模板 KPI 档位换算绩效分，并展示核算结果。</span>
+            <strong>绩效权重</strong>
+            <span>按所选模板 KPI 档位换算绩效分，并同步计算权重得分。</span>
           </div>
         </div>
       </div>
@@ -399,7 +405,7 @@ async function renderTeacherDashboard() {
                 <label for="templateId">问卷模板</label>
                 <select id="templateId" name="templateId">
                   ${data.templates.map((template) => html`
-                    <option value="${template.id}">${escapeHtml(template.name)}</option>
+                    <option value="${template.id}">${escapeHtml(template.name)} · ${template.weightLabel}</option>
                   `).join("")}
                 </select>
               </div>
@@ -468,8 +474,8 @@ function renderTemplateStats(items = []) {
             <span>${escapeHtml(template.achievementLabel)}</span>
           </div>
           <div>
-            <b>${formatScore(stats.kpiScore)}</b>
-            <span>绩效分</span>
+            <b>${formatScore(stats.weightedScore)}</b>
+            <span>权重得分 · ${template.weightLabel}</span>
           </div>
         </div>
       `).join("")}
@@ -503,8 +509,8 @@ function renderCourseItem(course) {
         <div class="grid four">
           ${metric(template.achievementLabel, formatScore(course.stats.achievement, template.achievementSuffix), course.stats.trimNote)}
           ${metric("绩效分", formatScore(course.stats.kpiScore), course.stats.band)}
+          ${metric("权重得分", formatScore(course.stats.weightedScore), template.weightLabel)}
           ${metric("原始均分", formatScore(course.stats.rawAverage), `满分 ${template.maxTotal}`)}
-          ${metric("评价数", course.stats.count, "已提交问卷")}
         </div>
         <div class="action-row" style="margin-top:14px;">
           <button class="btn small secondary" data-copy="${escapeHtml(surveyUrl(course.id))}"><span class="button-icon">C</span>复制链接</button>
@@ -673,6 +679,7 @@ function renderCoursesTable(courses) {
             <th>评价数</th>
             <th>剔除后得分</th>
             <th>绩效分</th>
+            <th>权重得分</th>
             <th>核算说明</th>
           </tr>
         </thead>
@@ -682,11 +689,12 @@ function renderCoursesTable(courses) {
             return html`
             <tr>
               <td>${escapeHtml(course.title)}<br><span class="hint">${formatDate(course.scheduledAt)}</span></td>
-              <td>${escapeHtml(template.shortName)}</td>
+              <td>${escapeHtml(template.shortName)}<br><span class="hint">${template.weightLabel} 权重</span></td>
               <td>${escapeHtml(course.teacherName)}<br><span class="hint">${escapeHtml(course.teacherEmail)}</span></td>
               <td>${course.stats.count}</td>
               <td>${formatScore(course.stats.achievement, template.achievementSuffix)}</td>
               <td>${formatScore(course.stats.kpiScore)}</td>
+              <td>${formatScore(course.stats.weightedScore)}</td>
               <td>${escapeHtml(course.stats.trimNote)}<br><span class="hint">${escapeHtml(course.stats.band)}</span></td>
             </tr>
           `;}).join("")}
@@ -706,7 +714,7 @@ function renderTeachersTable(teachers) {
             <th>负责人</th>
             <th>邮箱</th>
             <th>评价数</th>
-            <th>模板绩效概览</th>
+            <th>模板权重得分概览</th>
             <th>重置密码</th>
           </tr>
         </thead>
@@ -716,7 +724,7 @@ function renderTeachersTable(teachers) {
               <td>${escapeHtml(teacher.name)}</td>
               <td>${escapeHtml(teacher.email)}</td>
               <td>${teacher.templateStats.reduce((sum, item) => sum + item.stats.count, 0)}</td>
-              <td>${teacher.templateStats.map((item) => `${item.template.shortName}: ${formatScore(item.stats.kpiScore)}（${item.stats.count}份）`).join(" / ")}</td>
+              <td>${teacher.templateStats.map((item) => `${item.template.shortName}: ${formatScore(item.stats.weightedScore)}（${item.stats.count}份）`).join(" / ")}</td>
               <td>
                 <form class="reset-password-form" data-reset-password="${teacher.id}" data-reset-email="${escapeHtml(teacher.email)}">
                   <input name="password" type="password" minlength="6" placeholder="输入新密码" autocomplete="new-password" required />

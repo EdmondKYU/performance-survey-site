@@ -307,6 +307,10 @@ h3 {
 }
 
 .entry {
+  position: relative;
+  display: grid;
+  align-content: start;
+  min-height: 172px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   padding: 18px;
@@ -315,15 +319,24 @@ h3 {
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
 }
 
-a.entry:hover {
-  border-color: rgba(0, 113, 227, 0.35);
+.entry-clickable {
+  border-color: rgba(0, 113, 227, 0.42);
+  background: linear-gradient(180deg, #ffffff 0%, #f5faff 100%);
+  box-shadow: 0 10px 28px rgba(0, 113, 227, 0.1);
+}
+
+a.entry-clickable:hover {
+  border-color: rgba(0, 113, 227, 0.82);
   background: #ffffff;
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 18px 44px rgba(0, 113, 227, 0.18);
   transform: translateY(-2px);
 }
 
 .entry strong {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 7px;
   font-size: 16px;
 }
@@ -331,6 +344,35 @@ a.entry:hover {
 .entry span {
   color: var(--muted);
   line-height: 1.55;
+}
+
+.entry-clickable em {
+  align-self: end;
+  justify-self: start;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 18px;
+  border-radius: 999px;
+  padding: 5px 11px;
+  color: #ffffff;
+  background: var(--brand);
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 720;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.24);
+}
+
+.entry-arrow {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--brand);
+  font-size: 15px;
+  line-height: 1;
 }
 
 .template-list {
