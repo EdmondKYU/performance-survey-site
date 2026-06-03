@@ -85,6 +85,43 @@ const surveyTemplates = {
       { min: 70, max: 84.9, outMin: 70, outMax: 84, label: "评价尚可，还有进步空间，对应 84-70 分" },
       { min: 60, max: 69.9, outMin: 60, outMax: 69, label: "评价一般，有较大进步空间，对应 69-60 分" }
     ]
+  },
+  work_cooperation: {
+    id: "work_cooperation",
+    name: "工作配合度满意度调研",
+    shortName: "工作配合度",
+    ownerRoleName: "被考核成员",
+    itemName: "考核周期",
+    itemNamePlaceholder: "例如：6 月工作配合度考核",
+    itemNoteName: "考核说明",
+    itemNotePlaceholder: "可填写被考核成员、所在部门、重点协作事项或考核周期",
+    defaultCategory: "月度上级对成员工作配合满意度调研",
+    respondentNameLabel: "上级主管姓名",
+    respondentDepartmentLabel: "主管部门",
+    respondentNameFallback: "匿名主管",
+    dataSource: "上级主管评",
+    achievementLabel: "配合度得分",
+    achievementSuffix: "",
+    maxTotal: 120,
+    weight: 0.2,
+    weightLabel: "20%",
+    trimNote: "样本少于 3 份，暂不剔除最高分和最低分",
+    trimmedNote: "已剔除 1 个最高总分和 1 个最低总分",
+    belowBand: "低于 60 分，此项考核为 0",
+    questions: [
+      { key: "executionDepth", label: "执行落实度", prompt: "交办的事放心吗？" },
+      { key: "ownership", label: "主动担责", prompt: "推一步走一步还是自己跑？" },
+      { key: "reportCommunication", label: "汇报沟通", prompt: "进度看得见吗？出事早知道吗？" },
+      { key: "adaptability", label: "灵活应变", prompt: "变了能不能跟着转？" },
+      { key: "teamAlignment", label: "团队补位", prompt: "别人忙不过来会搭把手吗？" },
+      { key: "emotionalStability", label: "情绪稳定度", prompt: "压力下解决问题还是制造情绪？" }
+    ],
+    bands: [
+      { min: 100, max: 120, outMin: 100, outMax: 120, label: "非常满意，并给予高度评价，对应 120-100 分" },
+      { min: 85, max: 99.9, outMin: 85, outMax: 100, label: "满意，基本达到标准，对应 100-85 分" },
+      { min: 70, max: 84.9, outMin: 70, outMax: 84, label: "评价尚可，还有进步空间，对应 84-70 分" },
+      { min: 60, max: 69.9, outMin: 60, outMax: 69, label: "评价一般，有较大进步空间，对应 69-60 分" }
+    ]
   }
 };
 

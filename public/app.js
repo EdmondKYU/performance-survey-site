@@ -54,6 +54,33 @@ const fallbackTemplates = [
       { key: "communicationEffect", label: "沟通有效性", prompt: "信息传递是否准确、减少反复？" },
       { key: "processControl", label: "过程可控性", prompt: "过程是否有预警、有节奏、有闭环？" }
     ]
+  },
+  {
+    id: "work_cooperation",
+    name: "工作配合度满意度调研",
+    shortName: "工作配合度",
+    ownerRoleName: "被考核成员",
+    itemName: "考核周期",
+    itemNamePlaceholder: "例如：6 月工作配合度考核",
+    itemNoteName: "考核说明",
+    itemNotePlaceholder: "可填写被考核成员、所在部门、重点协作事项或考核周期",
+    defaultCategory: "月度上级对成员工作配合满意度调研",
+    respondentNameLabel: "上级主管姓名",
+    respondentDepartmentLabel: "主管部门",
+    respondentNameFallback: "匿名主管",
+    dataSource: "上级主管评",
+    achievementLabel: "配合度得分",
+    achievementSuffix: "",
+    maxTotal: 120,
+    weightLabel: "20%",
+    questions: [
+      { key: "executionDepth", label: "执行落实度", prompt: "交办的事放心吗？" },
+      { key: "ownership", label: "主动担责", prompt: "推一步走一步还是自己跑？" },
+      { key: "reportCommunication", label: "汇报沟通", prompt: "进度看得见吗？出事早知道吗？" },
+      { key: "adaptability", label: "灵活应变", prompt: "变了能不能跟着转？" },
+      { key: "teamAlignment", label: "团队补位", prompt: "别人忙不过来会搭把手吗？" },
+      { key: "emotionalStability", label: "情绪稳定度", prompt: "压力下解决问题还是制造情绪？" }
+    ]
   }
 ];
 
@@ -225,7 +252,7 @@ function renderHome() {
             </article>
           `).join("")}
         </div>
-        <p class="hint" style="margin-top:12px;">已支持：课程分享满意度调研、跨部门协同满意度调研。后续新增 KPI 表格时，只需要继续增加模板。</p>
+        <p class="hint" style="margin-top:12px;">已支持：${templates.map((template) => template.name).join("、")}。后续新增 KPI 表格时，只需要继续增加模板。</p>
       </div>
     </section>
   `);
