@@ -12,14 +12,13 @@ const fallbackTemplates = [
     itemNoteName: "课程备注",
     itemNotePlaceholder: "可填写分享主题、项目背景或适用对象",
     defaultCategory: "知识分享/项目复盘分享",
-    respondentNameLabel: "学员姓名",
-    respondentDepartmentLabel: "部门/小组",
+    respondentNameLabel: "评价人",
+    respondentDepartmentLabel: "所属部门",
     respondentNameFallback: "匿名学员",
     dataSource: "现场学员评",
     achievementLabel: "满意度",
     achievementSuffix: "%",
     maxTotal: 100,
-    weightLabel: "30%",
     questions: [
       { key: "usefulness", label: "内容实用度", prompt: "听完能用上吗？" },
       { key: "insight", label: "见解深度", prompt: "有没有独到洞察？" },
@@ -38,14 +37,13 @@ const fallbackTemplates = [
     itemNoteName: "协同说明",
     itemNotePlaceholder: "可填写协同背景、参与部门、交付目标或周期",
     defaultCategory: "跨部门协同",
-    respondentNameLabel: "评价人姓名",
-    respondentDepartmentLabel: "评价人部门",
+    respondentNameLabel: "评价人",
+    respondentDepartmentLabel: "所属部门",
     respondentNameFallback: "匿名评价人",
     dataSource: "协作满意度问卷评分",
     achievementLabel: "协作得分",
     achievementSuffix: "",
     maxTotal: 120,
-    weightLabel: "20%",
     questions: [
       { key: "requirementClarity", label: "需求清晰度", prompt: "目标、需求与验收口径是否清晰？" },
       { key: "deliveryStandard", label: "交付规范性", prompt: "交付物是否规范、完整、可复用？" },
@@ -65,14 +63,13 @@ const fallbackTemplates = [
     itemNoteName: "考核说明",
     itemNotePlaceholder: "可填写被考核成员、所在部门、重点协作事项或考核周期",
     defaultCategory: "月度上级对成员工作配合满意度调研",
-    respondentNameLabel: "上级主管姓名",
-    respondentDepartmentLabel: "主管部门",
+    respondentNameLabel: "评价人",
+    respondentDepartmentLabel: "所属部门",
     respondentNameFallback: "匿名主管",
     dataSource: "上级主管评",
     achievementLabel: "配合度得分",
     achievementSuffix: "",
     maxTotal: 120,
-    weightLabel: "20%",
     questions: [
       { key: "executionDepth", label: "执行落实度", prompt: "交办的事放心吗？" },
       { key: "ownership", label: "主动担责", prompt: "推一步走一步还是自己跑？" },
@@ -169,7 +166,7 @@ function go(path) {
 function shell(content) {
   const publicSurvey = route().startsWith("/survey/");
   const nav = publicSurvey ? "" : html`
-    <a class="${isActive("/") ? "active" : ""}" href="/" data-link>入口</a>
+    <a class="${isActive("/") ? "active" : ""}" href="/" data-link>首页</a>
     <a class="${isActive("/teacher") ? "active" : ""}" href="/teacher" data-link>负责人后台</a>
     <a class="${isActive("/admin") ? "active" : ""}" href="/admin" data-link>管理员</a>
     ${currentUser ? `<button type="button" data-action="logout">退出 ${escapeHtml(currentUser.name)}</button>` : ""}
@@ -247,7 +244,6 @@ function renderHome() {
               <div class="template-meta">
                 <span>${template.questions.length} 个维度</span>
                 <span>满分 ${template.maxTotal}</span>
-                <span>KPI 权重 ${template.weightLabel}</span>
               </div>
             </article>
           `).join("")}
@@ -279,8 +275,8 @@ function renderAuth(targetRole = "teacher") {
             <span>有效样本达到 3 份后，核算时剔除最高分和最低分。</span>
           </div>
           <div class="entry">
-            <strong>绩效权重</strong>
-            <span>按所选模板 KPI 档位换算绩效分，并同步计算权重得分。</span>
+            <strong>绩效核算</strong>
+            <span>按所选模板 KPI 档位换算绩效分，并展示核算结果。</span>
           </div>
         </div>
       </div>
@@ -361,6 +357,13 @@ function qrUrl(courseId) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(surveyUrl(courseId))}`;
 }
 
+function safeFilename(value) {
+  return String(value || "问卷二维码")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, "-")
+    .slice(0, 80);
+}
+
 async function renderTeacherDashboard() {
   if (!currentUser || currentUser.role !== "teacher") return renderAuth("teacher");
 
@@ -396,7 +399,7 @@ async function renderTeacherDashboard() {
                 <label for="templateId">问卷模板</label>
                 <select id="templateId" name="templateId">
                   ${data.templates.map((template) => html`
-                    <option value="${template.id}">${escapeHtml(template.name)} · ${template.weightLabel}</option>
+                    <option value="${template.id}">${escapeHtml(template.name)}</option>
                   `).join("")}
                 </select>
               </div>
@@ -465,8 +468,8 @@ function renderTemplateStats(items = []) {
             <span>${escapeHtml(template.achievementLabel)}</span>
           </div>
           <div>
-            <b>${formatScore(stats.weightedScore)}</b>
-            <span>${template.weightLabel} 权重</span>
+            <b>${formatScore(stats.kpiScore)}</b>
+            <span>绩效分</span>
           </div>
         </div>
       `).join("")}
@@ -500,11 +503,12 @@ function renderCourseItem(course) {
         <div class="grid four">
           ${metric(template.achievementLabel, formatScore(course.stats.achievement, template.achievementSuffix), course.stats.trimNote)}
           ${metric("绩效分", formatScore(course.stats.kpiScore), course.stats.band)}
-          ${metric("权重得分", formatScore(course.stats.weightedScore), template.weightLabel)}
           ${metric("原始均分", formatScore(course.stats.rawAverage), `满分 ${template.maxTotal}`)}
+          ${metric("评价数", course.stats.count, "已提交问卷")}
         </div>
         <div class="action-row" style="margin-top:14px;">
           <button class="btn small secondary" data-copy="${escapeHtml(surveyUrl(course.id))}"><span class="button-icon">C</span>复制链接</button>
+          <button class="btn small secondary" data-download-qr="${course.id}" data-title="${escapeHtml(course.title)}"><span class="button-icon">↓</span>保存二维码</button>
           <button class="btn small ghost" data-toggle-course="${course.id}" data-active="${course.active ? "false" : "true"}">${course.active ? "关闭问卷" : "重新开放"}</button>
         </div>
       </div>
@@ -550,6 +554,32 @@ function bindCourseEvents() {
     button.addEventListener("click", async () => {
       await navigator.clipboard.writeText(button.dataset.copy);
       showToast("问卷链接已复制");
+    });
+  });
+
+  document.querySelectorAll("[data-download-qr]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const courseId = button.dataset.downloadQr;
+      const title = button.dataset.title || "问卷二维码";
+      button.disabled = true;
+      try {
+        const response = await fetch(qrUrl(courseId));
+        if (!response.ok) throw new Error("二维码生成失败");
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${safeFilename(title)}-二维码.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        showToast("二维码已保存");
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        button.disabled = false;
+      }
     });
   });
 
@@ -643,7 +673,6 @@ function renderCoursesTable(courses) {
             <th>评价数</th>
             <th>剔除后得分</th>
             <th>绩效分</th>
-            <th>权重得分</th>
             <th>核算说明</th>
           </tr>
         </thead>
@@ -653,12 +682,11 @@ function renderCoursesTable(courses) {
             return html`
             <tr>
               <td>${escapeHtml(course.title)}<br><span class="hint">${formatDate(course.scheduledAt)}</span></td>
-              <td>${escapeHtml(template.shortName)}<br><span class="hint">${template.weightLabel} 权重</span></td>
+              <td>${escapeHtml(template.shortName)}</td>
               <td>${escapeHtml(course.teacherName)}<br><span class="hint">${escapeHtml(course.teacherEmail)}</span></td>
               <td>${course.stats.count}</td>
               <td>${formatScore(course.stats.achievement, template.achievementSuffix)}</td>
               <td>${formatScore(course.stats.kpiScore)}</td>
-              <td>${formatScore(course.stats.weightedScore)}</td>
               <td>${escapeHtml(course.stats.trimNote)}<br><span class="hint">${escapeHtml(course.stats.band)}</span></td>
             </tr>
           `;}).join("")}
@@ -688,7 +716,7 @@ function renderTeachersTable(teachers) {
               <td>${escapeHtml(teacher.name)}</td>
               <td>${escapeHtml(teacher.email)}</td>
               <td>${teacher.templateStats.reduce((sum, item) => sum + item.stats.count, 0)}</td>
-              <td>${teacher.templateStats.map((item) => `${item.template.shortName}: ${formatScore(item.stats.weightedScore)}（${item.stats.count}份）`).join(" / ")}</td>
+              <td>${teacher.templateStats.map((item) => `${item.template.shortName}: ${formatScore(item.stats.kpiScore)}（${item.stats.count}份）`).join(" / ")}</td>
               <td>
                 <form class="reset-password-form" data-reset-password="${teacher.id}" data-reset-email="${escapeHtml(teacher.email)}">
                   <input name="password" type="password" minlength="6" placeholder="输入新密码" autocomplete="new-password" required />
@@ -734,7 +762,7 @@ function bindAdminEvents() {
 }
 
 function renderResponsesTable(responses, admin = false) {
-  if (!responses.length) return `<div class="empty">还没有学员提交评价。</div>`;
+  if (!responses.length) return `<div class="empty">还没有评价人提交评价。</div>`;
   return html`
     <div class="table-wrap">
       <table class="data">
@@ -743,20 +771,23 @@ function renderResponsesTable(responses, admin = false) {
             <th>提交时间</th>
             ${admin ? "<th>负责人</th><th>问卷事项</th><th>模板</th>" : "<th>模板</th>"}
             <th>评价人</th>
-            <th>部门</th>
+            <th>所属部门</th>
             <th>维度得分</th>
             <th>总分</th>
             <th>建议</th>
           </tr>
         </thead>
         <tbody>
-          ${responses.map((response) => {
+          ${responses.map((response, index) => {
             const template = getTemplate(response.templateId);
+            const displayName = admin
+              ? response.participantName
+              : `第 ${response.participantSequence || index + 1} 号`;
             return html`
             <tr>
               <td>${formatDate(response.createdAt)}</td>
               ${admin ? `<td>${escapeHtml(response.teacherName)}<br><span class="hint">${escapeHtml(response.teacherEmail)}</span></td><td>${escapeHtml(response.courseTitle)}</td><td>${escapeHtml(template.shortName)}</td>` : `<td>${escapeHtml(template.shortName)}</td>`}
-              <td>${escapeHtml(response.participantName || template.respondentNameFallback)}</td>
+              <td>${escapeHtml(displayName)}</td>
               <td>${escapeHtml(response.department || "-")}</td>
               <td>${questionsFor(template).map((item) => `${item.label} ${response.scores?.[item.key] ?? "-"}`).join(" / ")}</td>
               <td><strong>${formatScore(response.total)}</strong><span class="hint"> / ${template.maxTotal}</span></td>
@@ -810,11 +841,11 @@ function renderSurveyForm(courseId, course, template) {
       <div class="grid two">
         <div class="field">
           <label for="participantName">${escapeHtml(template.respondentNameLabel)}</label>
-          <input id="participantName" name="participantName" placeholder="可匿名" />
+          <input id="participantName" name="participantName" placeholder="请填写评价人姓名" required />
         </div>
         <div class="field">
           <label for="department">${escapeHtml(template.respondentDepartmentLabel)}</label>
-          <input id="department" name="department" placeholder="例如：运营部" />
+          <input id="department" name="department" placeholder="例如：运营部" required />
         </div>
       </div>
 
@@ -822,15 +853,15 @@ function renderSurveyForm(courseId, course, template) {
         ${questionsFor(template).map((item) => html`
           <div class="score-row" data-score-row="${item.key}">
             <div class="score-title">${item.label}<span>${item.prompt}</span></div>
-            <input type="range" min="0" max="20" step="1" value="${initialScore}" name="${item.key}" aria-label="${item.label}" />
-            <input class="score-number" type="number" min="0" max="20" step="1" value="${initialScore}" data-score-number="${item.key}" aria-label="${item.label}分数" />
+            <input type="range" min="0" max="20" step="1" value="${initialScore}" name="${item.key}" aria-label="${item.label}" required />
+            <input class="score-number" type="number" min="0" max="20" step="1" value="${initialScore}" data-score-number="${item.key}" aria-label="${item.label}分数" required />
           </div>
         `).join("")}
       </div>
 
       <div class="field">
         <label for="comment">建议与反馈</label>
-        <textarea id="comment" name="comment" placeholder="可填写具体建议、风险提醒或协作改善方向"></textarea>
+        <textarea id="comment" name="comment" placeholder="请填写具体建议、风险提醒或协作改善方向" required></textarea>
       </div>
 
       <div class="survey-total">
