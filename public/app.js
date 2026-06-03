@@ -592,6 +592,7 @@ async function renderAdminDashboard() {
     `);
 
     document.querySelector("[data-refresh]")?.addEventListener("click", renderAdminDashboard);
+    bindAdminEvents();
   } catch (error) {
     if (error.message.includes("请先登录")) {
       currentUser = null;
@@ -651,6 +652,7 @@ function renderTeachersTable(teachers) {
             <th>邮箱</th>
             <th>评价数</th>
             <th>模板绩效概览</th>
+            <th>重置密码</th>
           </tr>
         </thead>
         <tbody>
@@ -660,12 +662,48 @@ function renderTeachersTable(teachers) {
               <td>${escapeHtml(teacher.email)}</td>
               <td>${teacher.templateStats.reduce((sum, item) => sum + item.stats.count, 0)}</td>
               <td>${teacher.templateStats.map((item) => `${item.template.shortName}: ${formatScore(item.stats.weightedScore)}（${item.stats.count}份）`).join(" / ")}</td>
+              <td>
+                <form class="reset-password-form" data-reset-password="${teacher.id}" data-reset-email="${escapeHtml(teacher.email)}">
+                  <input name="password" type="password" minlength="6" placeholder="输入新密码" autocomplete="new-password" required />
+                  <button class="btn small secondary" type="submit">重置</button>
+                </form>
+              </td>
             </tr>
           `).join("")}
         </tbody>
       </table>
     </div>
   `;
+}
+
+function bindAdminEvents() {
+  document.querySelectorAll("[data-reset-password]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const passwordInput = form.querySelector("input[name='password']");
+      const password = passwordInput.value;
+      if (password.length < 6) {
+        showToast("新密码至少 6 位");
+        return;
+      }
+
+      const button = form.querySelector("button[type='submit']");
+      button.disabled = true;
+
+      try {
+        await api(`/api/admin/users/${form.dataset.resetPassword}/password`, {
+          method: "POST",
+          body: JSON.stringify({ password })
+        });
+        passwordInput.value = "";
+        showToast(`${form.dataset.resetEmail} 的密码已重置`);
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
 }
 
 function renderResponsesTable(responses, admin = false) {

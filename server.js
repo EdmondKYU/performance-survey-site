@@ -284,6 +284,12 @@ function destroySession(token) {
   if (token) sessions.delete(token);
 }
 
+function destroySessionsForUser(userId) {
+  for (const [token, session] of sessions.entries()) {
+    if (session.userId === userId) sessions.delete(token);
+  }
+}
+
 function getSessionUser(req, db) {
   const token = parseCookies(req.headers.cookie || "").session;
   const session = sessions.get(token);
@@ -739,6 +745,27 @@ async function handleApi(req, res, pathname) {
       stats,
       templateStats: templateStats(db, db.responses)
     });
+  }
+
+  const resetPasswordMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/password$/);
+  if (req.method === "POST" && resetPasswordMatch) {
+    if (user.role !== "admin") return sendError(res, 403, "当前账号不是管理员");
+
+    const targetUser = db.users.find((item) => item.id === resetPasswordMatch[1]);
+    if (!targetUser) return sendError(res, 404, "账号不存在");
+    if (targetUser.role === "admin") return sendError(res, 403, "管理员密码请通过环境变量修改");
+
+    const body = await readBody(req);
+    const newPassword = String(body.password || "");
+    if (newPassword.length < 6) return sendError(res, 400, "新密码至少 6 位");
+
+    targetUser.password = hashPassword(newPassword);
+    targetUser.passwordResetAt = nowIso();
+    targetUser.passwordResetBy = user.id;
+    writeDb(db);
+    destroySessionsForUser(targetUser.id);
+
+    return sendJson(res, 200, { user: publicUser(targetUser), ok: true });
   }
 
   if (req.method === "GET" && pathname === "/api/admin/export") {
