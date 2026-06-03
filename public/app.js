@@ -219,16 +219,11 @@ function renderHome() {
         <h1>通用考核调研平台</h1>
         <p class="sub">把不同 KPI 表格沉淀成可复用问卷模板。负责人创建问卷后生成二维码，评价人扫码打分，系统按模板规则剔除最高分和最低分并计算绩效分。</p>
 
-        <div class="entry-strip">
+        <div class="entry-strip home-entry-strip">
           <a class="entry entry-clickable" href="/teacher" data-link>
-            <strong>负责人<span class="entry-arrow">→</span></strong>
+            <strong>负责人</strong>
             <span>注册账号、选择模板、创建问卷、生成二维码、查看个人数据。</span>
-            <em>进入负责人后台</em>
-          </a>
-          <a class="entry entry-clickable" href="/admin" data-link>
-            <strong>管理员<span class="entry-arrow">→</span></strong>
-            <span>查看全部负责人、全部问卷、明细评价和绩效核算结果。</span>
-            <em>进入管理员后台</em>
+            <span class="entry-arrow" aria-hidden="true">→</span>
           </a>
           <div class="entry">
             <strong>评价人</strong>

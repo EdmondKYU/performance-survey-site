@@ -306,6 +306,10 @@ h3 {
   margin-top: 26px;
 }
 
+.home-entry-strip {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .entry {
   position: relative;
   display: grid;
@@ -320,6 +324,9 @@ h3 {
 }
 
 .entry-clickable {
+  cursor: pointer;
+  padding-right: 62px;
+  padding-bottom: 50px;
   border-color: rgba(0, 113, 227, 0.42);
   background: linear-gradient(180deg, #ffffff 0%, #f5faff 100%);
   box-shadow: 0 10px 28px rgba(0, 113, 227, 0.1);
@@ -333,10 +340,7 @@ a.entry-clickable:hover {
 }
 
 .entry strong {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  display: block;
   margin-bottom: 7px;
   font-size: 16px;
 }
@@ -346,33 +350,21 @@ a.entry-clickable:hover {
   line-height: 1.55;
 }
 
-.entry-clickable em {
-  align-self: end;
-  justify-self: start;
-  min-height: 30px;
-  display: inline-flex;
-  align-items: center;
-  margin-top: 18px;
-  border-radius: 999px;
-  padding: 5px 11px;
-  color: #ffffff;
-  background: var(--brand);
-  font-style: normal;
-  font-size: 13px;
-  font-weight: 720;
-  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.24);
-}
-
 .entry-arrow {
-  width: 28px;
-  height: 28px;
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  width: 34px;
+  height: 34px;
   display: inline-grid;
   place-items: center;
   border-radius: 50%;
-  color: #ffffff;
+  color: #ffffff !important;
   background: var(--brand);
-  font-size: 15px;
+  font-size: 18px;
+  font-weight: 900;
   line-height: 1;
+  box-shadow: 0 5px 14px rgba(0, 113, 227, 0.28);
 }
 
 .template-list {
