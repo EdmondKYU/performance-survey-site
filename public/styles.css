@@ -680,7 +680,7 @@ a.entry-clickable:hover {
 
 .score-row {
   display: grid;
-  grid-template-columns: minmax(130px, 1fr) minmax(150px, 2fr) 76px;
+  grid-template-columns: minmax(130px, 1fr) minmax(150px, 2fr) minmax(108px, 0.9fr);
   gap: 12px;
   align-items: center;
   padding: 14px 0;
@@ -708,12 +708,34 @@ input[type="range"] {
   cursor: pointer;
 }
 
+.score-control {
+  display: grid;
+  gap: 6px;
+}
+
 .score-number {
+  width: 100%;
   min-height: 38px;
   border: 1px solid #d2d2d7;
   border-radius: 8px;
   padding: 8px;
   outline: none;
+}
+
+.score-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  border: 1px solid rgba(0, 113, 227, 0.18);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: rgba(0, 113, 227, 0.08);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .survey-total {

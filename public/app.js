@@ -123,6 +123,34 @@ function questionsFor(template) {
   return (template || getTemplate()).questions || [];
 }
 
+function scoreTip(score) {
+  const tips = [
+    "未体现",
+    "基本未达标",
+    "严重不足",
+    "明显不足",
+    "不及格",
+    "临界不及格",
+    "及格",
+    "勉强及格",
+    "需要提升",
+    "中等偏下",
+    "基准中等",
+    "中等",
+    "中等偏上",
+    "较好",
+    "稳定较好",
+    "良好",
+    "稳定良好",
+    "接近优秀",
+    "优秀",
+    "非常优秀",
+    "卓越"
+  ];
+  const safeScore = Math.min(20, Math.max(0, Math.round(Number(score) || 0)));
+  return tips[safeScore];
+}
+
 function formatDate(value) {
   if (!value) return "未设置";
   const date = new Date(value);
@@ -837,7 +865,7 @@ async function renderSurvey(courseId) {
 }
 
 function renderSurveyForm(courseId, course, template) {
-  const initialScore = Math.min(18, 20);
+  const initialScore = 10;
   const initialTotal = questionsFor(template).length * initialScore;
   return html`
     <form id="surveyForm" class="survey-form">
@@ -857,7 +885,10 @@ function renderSurveyForm(courseId, course, template) {
           <div class="score-row" data-score-row="${item.key}">
             <div class="score-title">${item.label}<span>${item.prompt}</span></div>
             <input type="range" min="0" max="20" step="1" value="${initialScore}" name="${item.key}" aria-label="${item.label}" required />
-            <input class="score-number" type="number" min="0" max="20" step="1" value="${initialScore}" data-score-number="${item.key}" aria-label="${item.label}分数" required />
+            <div class="score-control">
+              <input class="score-number" type="number" min="0" max="20" step="1" value="${initialScore}" data-score-number="${item.key}" aria-label="${item.label}分数" required />
+              <span class="score-tip" data-score-tip="${item.key}">${initialScore}分 · ${scoreTip(initialScore)}</span>
+            </div>
           </div>
         `).join("")}
       </div>
@@ -891,17 +922,24 @@ function bindSurveyForm(courseId, template) {
     totalScore.textContent = total.toFixed(0);
   }
 
+  function updateTip(item, value) {
+    const tip = form.querySelector(`[data-score-tip="${item.key}"]`);
+    if (tip) tip.textContent = `${value}分 · ${scoreTip(value)}`;
+  }
+
   questions.forEach((item) => {
     const range = form.querySelector(`input[type="range"][name="${item.key}"]`);
     const number = form.querySelector(`[data-score-number="${item.key}"]`);
     range.addEventListener("input", () => {
       number.value = range.value;
+      updateTip(item, range.value);
       updateTotal();
     });
     number.addEventListener("input", () => {
       const value = Math.min(20, Math.max(0, Number(number.value || 0)));
       range.value = value;
       number.value = value;
+      updateTip(item, value);
       updateTotal();
     });
   });
