@@ -810,6 +810,40 @@ async function handleApi(req, res, pathname) {
     });
   }
 
+  const deleteResponseMatch = pathname.match(/^\/api\/admin\/responses\/([^/]+)$/);
+  if (req.method === "DELETE" && deleteResponseMatch) {
+    if (user.role !== "admin") return sendError(res, 403, "当前账号不是管理员");
+
+    const responseId = deleteResponseMatch[1];
+    const responseIndex = db.responses.findIndex((item) => item.id === responseId);
+    if (responseIndex === -1) return sendError(res, 404, "评价记录不存在");
+
+    const target = db.responses[responseIndex];
+    const body = await readBody(req);
+    const expectedCreatedAt = String(body.createdAt || "");
+    const expectedTemplateId = String(body.templateId || "");
+    const actualTemplateId = target.templateId || db.courses.find((item) => item.id === target.courseId)?.templateId || "course_share";
+
+    if (expectedCreatedAt && target.createdAt !== expectedCreatedAt) {
+      return sendError(res, 409, "提交时间不匹配，已取消删除");
+    }
+
+    if (expectedTemplateId && actualTemplateId !== expectedTemplateId) {
+      return sendError(res, 409, "问卷模板不匹配，已取消删除");
+    }
+
+    const [deleted] = db.responses.splice(responseIndex, 1);
+    writeDb(db);
+
+    return sendJson(res, 200, {
+      ok: true,
+      deleted: {
+        ...responseSummary(deleted),
+        templateId: actualTemplateId
+      }
+    });
+  }
+
   const resetPasswordMatch = pathname.match(/^\/api\/admin\/users\/([^/]+)\/password$/);
   if (req.method === "POST" && resetPasswordMatch) {
     if (user.role !== "admin") return sendError(res, 403, "当前账号不是管理员");
